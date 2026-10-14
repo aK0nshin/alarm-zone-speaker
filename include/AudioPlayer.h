@@ -12,15 +12,17 @@ public:
     ~AudioPlayer();
 
     bool begin();
-    bool play(const char* filePath); // Запуск файла с любого места (прерывает текущий, если играл)
-    void stop();                     // Немедленный стоп и аппаратная тишина
-    bool isPlaying() const;          // Возвращает true, пока файл физически проигрывается
+    bool play(const char* filePath); 
+    void stop();                     
+    bool isPlaying() const;          
 
 private:
     bool parseWavHeader();
 
     gpio_num_t _audioPin;
     File _audioFile;
+
+    char _trackPathBuffer[64]; 
     
     uint32_t _sampleRate;
     uint32_t _dataSize;

@@ -8,16 +8,13 @@
 AudioPlayer* AudioPlayer::_instance = nullptr;
 
 void IRAM_ATTR AudioPlayer::onTimerISR() {
-    // Ранний выход, если плеер выключен или инстанса нет
     if (!_instance || !_instance->_isAudioPlaying) return;
 
-    // Ранний выход, если файл кончился или недоступен
     if (!_instance->_audioFile || !_instance->_audioFile.available() || _instance->_bytesRead >= _instance->_dataSize) {
         _instance->_isAudioPlaying = false;
         return;
     }
 
-    // Полезная работа прерывания (без вложенных if)
     uint8_t sample = _instance->_audioFile.read();
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL, sample);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL);
@@ -26,9 +23,10 @@ void IRAM_ATTR AudioPlayer::onTimerISR() {
 
 AudioPlayer::AudioPlayer(gpio_num_t pin) {
     _audioPin = pin;
-    _audioTimer = NULL;
+    _audioTimer = nullptr; // Явно пишем nullptr вместо NULL для строгости C++
     _bytesRead = 0;
     _isAudioPlaying = false;
+    memset(_trackPathBuffer, 0, sizeof(_trackPathBuffer));
     _instance = this;
 }
 
@@ -48,14 +46,28 @@ bool AudioPlayer::begin() {
 }
 
 bool AudioPlayer::play(const char* filePath) {
-    stop(); // Прерываем старый файл перед запуском нового
+    if (filePath == nullptr) return false;
+    strncpy(_trackPathBuffer, filePath, sizeof(_trackPathBuffer) - 1);
+    _trackPathBuffer[sizeof(_trackPathBuffer) - 1] = '\0'; // Гарантированный нуль-терминатор
+
+    Serial.printf("[Debug-Player] Старт воспроизведения безопасного пути: %s\n", _trackPathBuffer); 
+    Serial.flush();
+
+    stop(); // Глушим старые прерывания
     
-    _audioFile = SPIFFS.open(filePath, "r");
-    if (!_audioFile) return false; // Ранний выход: файл не найден
+    // Открываем файл из собственного буфера, который никуда не исчезнет из памяти
+    _audioFile = SPIFFS.open(_trackPathBuffer, "r");
+    if (!_audioFile) {
+        Serial.println("[Debug-Player] ОШИБКА: Файл не найден на SPIFFS!"); 
+        Serial.flush();
+        return false;
+    }
 
     if (!parseWavHeader()) {
+        Serial.println("[Debug-Player] ОШИБКА: Неверный формат заголовка!"); 
+        Serial.flush();
         _audioFile.close();
-        return false; // Ранний выход: заголовок битый
+        return false;
     }
 
     _audioFile.seek(_dataStartOffset);
@@ -74,24 +86,48 @@ bool AudioPlayer::play(const char* filePath) {
 
     if (_audioTimer == NULL) {
         _audioTimer = timerBegin(0, 80, true);
-        timerAttachInterrupt(_audioTimer, &AudioPlayer::onTimerISR, true);
+        timerAttachInterrupt(_audioTimer, &AudioPlayer::onTimerISR, false);
     }
 
-    timerAlarmWrite(_audioTimer, 1000000 / _sampleRate, true);
+    uint64_t alarmIntervalMicros = 1000000 / _sampleRate;
+    timerAlarmWrite(_audioTimer, alarmIntervalMicros, true);
+    
     _isAudioPlaying = true;
     timerAlarmEnable(_audioTimer);
+
+    Serial.println("[Debug-Player] Аппаратный таймер запущен успешно."); 
+    Serial.flush();
     return true;
 }
 
 void AudioPlayer::stop() {
     _isAudioPlaying = false;
-    
-    if (_audioTimer) timerAlarmDisable(_audioTimer);
-    if (_audioFile) _audioFile.close();
+    Serial.println("[Debug-Stop] Вошли в stop()"); Serial.flush();
 
+    if (_audioTimer != NULL) {
+        Serial.printf("[Debug-Stop] Таймер инициализирован (адрес: %p). Отключаем... ", _audioTimer); Serial.flush();
+        timerAlarmDisable(_audioTimer);
+        Serial.println("Успешно."); Serial.flush();
+    } else {
+        Serial.println("[Debug-Stop] Таймер равен NULL, пропуск отключения."); Serial.flush();
+    }
+    
+    Serial.print("[Debug-Stop] Закрытие файла... "); Serial.flush();
+    if (_audioFile) {
+        _audioFile.close();
+    }
+    Serial.println("Успешно."); Serial.flush();
+
+    Serial.print("[Debug-Stop] Сброс ШИМ (LEDC)... "); Serial.flush();
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL);
+    Serial.println("Успешно."); Serial.flush();
+
+    Serial.print("[Debug-Stop] Физический сброс пина... "); Serial.flush();
     gpio_reset_pin(_audioPin);
     pinMode(_audioPin, OUTPUT);
     digitalWrite(_audioPin, LOW);
+    Serial.println("Успешно. Выходим из stop()"); Serial.flush();
 }
 
 bool AudioPlayer::isPlaying() const {
@@ -99,16 +135,18 @@ bool AudioPlayer::isPlaying() const {
 }
 
 bool AudioPlayer::parseWavHeader() {
-    if (_audioFile.size() < 44) return false; // Ранний выход: файл слишком мелкий
+    if (_audioFile.size() < 44) return false;
     
-    uint8_t header[44];
+    // ЖЕСТКИЙ ФИКС: Объявляем честный массив на 44 байта, чтобы не затирать стек ядра!
+    uint8_t header[44]; 
     _audioFile.read(header, 44);
     
-    if (memcmp(header, "RIFF", 4) != 0 || memcmp(header + 8, "WAVE", 4) != 0) return false; // Ранний выход: не WAV
+    if (memcmp(header, "RIFF", 4) != 0 || memcmp(header + 8, "WAVE", 4) != 0) return false;
     
     _sampleRate = header[24] | (header[25] << 8) | (header[26] << 16) | (header[27] << 24);
+    
     uint16_t bitsPerSample = header[34] | (header[35] << 8);
-    if (bitsPerSample != 8) return false; // Ранний выход: не 8-бит
+    if (bitsPerSample != 8) return false;
     
     uint32_t offset = 12;
     while (offset < _audioFile.size() - 8) {
@@ -120,9 +158,9 @@ bool AudioPlayer::parseWavHeader() {
         if (memcmp(chunkId, "data", 4) == 0) {
             _dataSize = chunkSize;
             _dataStartOffset = offset + 8;
-            return true; // Ранний выход при успехе: нашли аудиопоток
+            return true;
         }
         offset += 8 + chunkSize;
     }
-    return false; // Ранний выход: чанк data не найден
+    return false;
 }

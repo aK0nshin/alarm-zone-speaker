@@ -19,7 +19,7 @@ void setup() {
     }
 
     player.begin();
-    radio.begin();
+    // radio.begin();
     alarmManager.begin();
 
     randomSeed(analogRead(0)); 
@@ -28,9 +28,9 @@ void setup() {
 }
 
 void loop() {
-    RadioCommand command = radio.checkPayload();
+    // RadioCommand command = radio.checkPayload();
 
-    alarmManager.processCommand(command);
+    // alarmManager.processCommand(command);
 
     alarmManager.tick();
 

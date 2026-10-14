@@ -9,15 +9,16 @@ void AlarmManager::begin() {
 }
 
 void AlarmManager::playStartupTrack() {
-    Serial.println("[Manager] Загрузка стартового трека системы безопасности...");
+    Serial.println("playStartupTrack start");
     _currentPriority = AudioPriority::ALARM;
     _lastBackgroundPlayTime = millis();
     
     addTrackToPipeline(FILE_STARTUP);
+    Serial.println("playStartupTrack start end");
 }
 
 void AlarmManager::processCommand(RadioCommand cmd) {
-    if (cmd == RadioCommand::NONE) return; // Ранний выход
+    if (cmd == RadioCommand::NONE) return;
 
     if (static_cast<int>(cmd) == EMERGENCY_STOP_CODE) {
         Serial.println("[Manager] Экстренный останов. Очистка конвейера.");
@@ -46,7 +47,8 @@ void AlarmManager::processCommand(RadioCommand cmd) {
 }
 
 void AlarmManager::tick() {
-    if (_player.isPlaying()) return; 
+    Serial.println("tick start");
+    if (_player.isPlaying()) return;
 
     if (_pipeHead != _pipeTail) {
         String nextTrack = _pipelineQueue[_pipeHead];
@@ -73,9 +75,11 @@ void AlarmManager::tick() {
         }
         playBackgroundPhrase();
     }
+    Serial.println("tick end");
 }
 
 void AlarmManager::addTrackToPipeline(const char* filePath) {
+    Serial.println("addTrackToPipeline start");
     uint8_t nextTail = (_pipeTail + 1) % PIPELINE_SIZE;
     
     if (nextTail == _pipeHead) {
@@ -85,6 +89,7 @@ void AlarmManager::addTrackToPipeline(const char* filePath) {
 
     _pipelineQueue[_pipeTail] = filePath;
     _pipeTail = nextTail;
+    Serial.println("addTrackToPipeline end");
 }
 
 void AlarmManager::playBackgroundPhrase() {
