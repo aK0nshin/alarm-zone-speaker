@@ -32,4 +32,5 @@ WORKDIR /workspace
 CMD ["/bin/bash"]
 
 # docker run --rm -it -v "${PWD}:/workspace" pio-esp32
+# ./rebuild.sh
 # https://espressif.github.io/esptool-js/

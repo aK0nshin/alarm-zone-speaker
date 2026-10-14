@@ -70,20 +70,10 @@ docker build -t pio-esp32 .
 ```
 
 ### 3. Компиляция в 1 клик
-Создай в корне скрипт `build.sh`:
-
-```bash
-#!/bin/bash
-set -e
-pio run --target clean
-pio run --target buildfs
-pio run
-```
-
 Запусти сборку из **PowerShell** одной командой:
 
 ```powershell
-docker run --rm -it -v "${PWD}:/workspace" pio-esp32 /bin/bash ./build.sh
+docker run --rm -it -v "${PWD}:/workspace" pio-esp32 /bin/bash ./rebuild.sh
 ```
 
 Контейнер соберёт бинарники и сам удалится из памяти. Результаты запишутся в папку `.pio/build/esp32-c3/`.
