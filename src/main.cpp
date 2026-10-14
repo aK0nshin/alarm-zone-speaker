@@ -11,7 +11,7 @@ AlarmManager alarmManager(player);
 void setup() {
     Serial.begin(115200);
     delay(4000); 
-    Serial.println("\n=== ОХРАННЫЙ КОМПЛЕКС ЗАПУЩЕН ===");
+    Serial.println("\n=== Спикер запущен ===");
 
     if (!SPIFFS.begin(true)) {
         Serial.println("[Критическая ошибка] SPIFFS поврежден!");
@@ -23,6 +23,8 @@ void setup() {
     alarmManager.begin();
 
     randomSeed(analogRead(0)); 
+
+    alarmManager.playStartupTrack();
 }
 
 void loop() {

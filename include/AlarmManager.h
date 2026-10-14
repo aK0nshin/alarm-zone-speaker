@@ -16,7 +16,8 @@ public:
     AlarmManager(AudioPlayer& player);
     
     void begin();
-    void processCommand(RadioCommand cmd); 
+    void playStartupTrack();
+    void processCommand(RadioCommand cmd);
     void tick();                           
 
 private:
@@ -57,6 +58,7 @@ private:
     // Имена статических системных треков
     const char* FILE_CAMERA = "/camera.wav";
     const char* FILE_INTRUDER = "/intruder.wav";
+    const char* FILE_STARTUP = "/territory.wav"; 
 
     // Спецификаторы форматирования строк
     const char* FMT_ZONE_FILE = "/%02d.wav";

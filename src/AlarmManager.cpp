@@ -8,6 +8,14 @@ void AlarmManager::begin() {
     resetBackgroundTimer();
 }
 
+void AlarmManager::playStartupTrack() {
+    Serial.println("[Manager] Загрузка стартового трека системы безопасности...");
+    _currentPriority = AudioPriority::ALARM;
+    _lastBackgroundPlayTime = millis();
+    
+    addTrackToPipeline(FILE_STARTUP);
+}
+
 void AlarmManager::processCommand(RadioCommand cmd) {
     if (cmd == RadioCommand::NONE) return; // Ранний выход
 
