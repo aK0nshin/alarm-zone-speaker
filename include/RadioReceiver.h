@@ -3,24 +3,29 @@
 
 #include <Arduino.h>
 
-// Перечисление системных команд, которые могут прийти по радио
+// Что может прийти по радио
 enum class RadioCommand {
-    NONE,           // Ничего не пришло
-    ZONE_1_ALARM,   // Тревога в зоне 1
-    ZONE_2_SERVICE, // Сервисное событие в зоне 2
-    EMERGENCY_STOP  // Команда полной остановки
+    NONE,
+    ZONE_1_ALARM,
+    ZONE_2_ALARM,
+    ZONE_3_ALARM,
+    ZONE_4_ALARM,
+    ZONE_5_ALARM,
+    ZONE_6_ALARM,
+    ZONE_7_ALARM,
+    ZONE_8_ALARM,
+    ZONE_9_ALARM,
+    ZONE_10_ALARM,
+    EMERGENCY_STOP
 };
 
 class RadioReceiver {
 public:
-    // Конструктор принимает пины или параметры, если это необходимо
     RadioReceiver();
     ~RadioReceiver();
 
-    // Инициализация радиомодуля (вызывается в setup)
     bool begin();
 
-    // Опрос эфира (вызывается в loop). Возвращает команду, если она пришла
     RadioCommand checkPayload();
 };
 

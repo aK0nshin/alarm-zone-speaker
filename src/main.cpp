@@ -47,7 +47,7 @@ void setup() {
     radio.begin();
 
     Serial.println("[System] Стартовый запуск системы...");
-    requestPlay("/terpodnab.wav", PRIORITY_LOW);
+    requestPlay("/territory.wav", PRIORITY_LOW);
 }
 
 void loop() {
