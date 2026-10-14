@@ -5,18 +5,14 @@
 
 // Что может прийти по радио
 enum class RadioCommand {
-    NONE,
-    ZONE_1_ALARM,
-    ZONE_2_ALARM,
-    ZONE_3_ALARM,
-    ZONE_4_ALARM,
-    ZONE_5_ALARM,
-    ZONE_6_ALARM,
-    ZONE_7_ALARM,
-    ZONE_8_ALARM,
-    ZONE_9_ALARM,
-    ZONE_10_ALARM,
-    EMERGENCY_STOP
+    NONE = 0,
+    ZONE_1_ALARM = 1,
+    ZONE_2_ALARM = 2,
+    ZONE_3_ALARM = 3,
+    ZONE_4_ALARM = 4,
+    ZONE_5_ALARM = 5,
+    ZONE_6_ALARM = 6,
+    EMERGENCY_STOP = 99
 };
 
 class RadioReceiver {

@@ -28,10 +28,6 @@ RadioCommand RadioReceiver::checkPayload() {
         case 4:   case '4': return RadioCommand::ZONE_4_ALARM;
         case 5:   case '5': return RadioCommand::ZONE_5_ALARM;
         case 6:   case '6': return RadioCommand::ZONE_6_ALARM;
-        case 7:   case '7': return RadioCommand::ZONE_7_ALARM;
-        case 8:   case '8': return RadioCommand::ZONE_8_ALARM;
-        case 9:   case '9': return RadioCommand::ZONE_9_ALARM;
-        case 10:   case '10': return RadioCommand::ZONE_10_ALARM;
         case 's': case 99:  return RadioCommand::EMERGENCY_STOP;
         default:            return RadioCommand::NONE;
     }
