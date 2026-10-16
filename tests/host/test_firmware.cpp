@@ -1,5 +1,5 @@
 #include "AlarmManager.h"
-#include "WavPlayer.h"
+#include "Mp3Player.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -47,31 +47,31 @@ static void testManager() {
     assert(manager.begin());
     manager.playStartupTrack();
     manager.tick();
-    assert(player.tracks.back() == "/territory.wav");
+    assert(player.tracks.back() == "/territory.mp3");
     manager.processCommand(RadioCommand::ZONE_2_ALARM);
     manager.tick();
     assert(player.tracks.size() == 1);
     player.complete();
     manager.tick();
-    assert(player.tracks.back() == "/camera.wav");
+    assert(player.tracks.back() == "/camera.mp3");
     player.complete(); manager.tick();
-    assert(player.tracks.back() == "/02.wav");
+    assert(player.tracks.back() == "/02.mp3");
     player.complete(); manager.tick();
-    assert(player.tracks.back() == "/intruder.wav");
+    assert(player.tracks.back() == "/intruder.mp3");
     player.complete(); manager.tick();
 
     testMillis += 240000;
     manager.tick();
-    assert(player.tracks.back() == "/phrase_01.wav");
+    assert(player.tracks.back() == "/phrase_01.mp3");
     player.complete(); manager.tick();
     testMillis += 240000;
     manager.tick();
-    assert(player.tracks.back() == "/phrase_01.wav");
+    assert(player.tracks.back() == "/phrase_01.mp3");
     size_t before = player.tracks.size();
     manager.processCommand(RadioCommand::ZONE_3_ALARM);
     assert(!player.playing);
     manager.tick();
-    assert(player.tracks.size() == before + 1 && player.tracks.back() == "/camera.wav");
+    assert(player.tracks.size() == before + 1 && player.tracks.back() == "/camera.mp3");
 
     manager.processCommand(RadioCommand::ZONE_4_ALARM);
     manager.processCommand(RadioCommand::EMERGENCY_STOP);
@@ -86,19 +86,19 @@ static void testManager() {
     for (int i = 0; i < 19; ++i) { player.complete(); manager.tick(); }
     assert(player.tracks.size() == before + 18);
     for (size_t i = before; i < player.tracks.size(); i += 3) {
-        assert(player.tracks[i] == "/camera.wav");
-        assert(player.tracks[i + 1] == "/01.wav");
-        assert(player.tracks[i + 2] == "/intruder.wav");
+        assert(player.tracks[i] == "/camera.mp3");
+        assert(player.tracks[i + 1] == "/01.mp3");
+        assert(player.tracks[i + 2] == "/intruder.mp3");
     }
 
-    player.rejected = "/02.wav";
+    player.rejected = "/02.mp3";
     manager.processCommand(RadioCommand::ZONE_2_ALARM);
     manager.processCommand(RadioCommand::ZONE_5_ALARM);
     manager.tick();
     player.complete(); manager.tick();
-    assert(player.tracks.back() == "/02.wav");
+    assert(player.tracks.back() == "/02.mp3");
     manager.tick();
-    assert(player.tracks.back() == "/camera.wav");
+    assert(player.tracks.back() == "/camera.mp3");
     player.error = true;
     player.complete(); manager.tick();
     before = player.tracks.size();
@@ -109,7 +109,7 @@ static void testManager() {
     manager.processCommand(RadioCommand::EMERGENCY_STOP);
     testMillis += 240000;
     manager.tick();
-    assert(player.tracks.back() == "/phrase_01.wav");
+    assert(player.tracks.back() == "/phrase_01.mp3");
     std::cout << "Manager: startup, FIFO, overflow, preemption, stop, repeat, errors, wrap passed\n";
 }
 
@@ -119,89 +119,94 @@ static std::vector<uint8_t> readAsset(const char* path) {
     return std::vector<uint8_t>((std::istreambuf_iterator<char>(input)), {});
 }
 
-static void testAudio() {
-    WavPlayer player(GPIO_NUM_3);
+static void testMp3(const char* referenceDirectory) {
+    Mp3Player player(GPIO_NUM_3);
     assert(player.begin());
-    const char* names[] = {"01.wav", "02.wav", "03.wav", "04.wav", "05.wav", "06.wav",
-                          "camera.wav", "intruder.wav", "territory.wav", "phrase_01.wav"};
+    const char* names[] = {"01", "02", "03", "04", "05", "06",
+                          "camera", "intruder", "territory", "phrase_01"};
     for (const auto* name : names) {
-        auto input = readAsset(name);
-        drwav reference = {};
-        assert(drwav_init_memory(&reference, input.data(), input.size(), nullptr));
-        const size_t offset = reference.dataChunkDataPos;
-        const size_t samples = reference.totalPCMFrameCount;
-        drwav_uninit(&reference);
-        assert(player.play((std::string("/") + name).c_str()));
-        for (int i = 0; i < 10000 && player.isPlaying(); ++i) {
+        std::string path = std::string("/") + name + ".mp3";
+        assert(player.play(path.c_str()));
+        for (int i = 0; i < 20000 && player.isPlaying(); ++i) {
             player.tick();
-            testMillis += 16;
+            testMillis += 1;
         }
         assert(!player.isPlaying() && !player.hasError());
-        assert(pcm.size() == samples * 2);
-        for (size_t i = 0; i < samples; ++i) {
-            int16_t actual;
-            std::memcpy(&actual, pcm.data() + 2 * i, 2);
-            assert(actual == (int(input[offset + i]) - 128) * 256);
+        std::ifstream reference(std::string(referenceDirectory) + "/" + name + ".pcm", std::ios::binary);
+        assert(reference);
+        std::vector<uint8_t> expected((std::istreambuf_iterator<char>(reference)), {});
+        assert(pcm.size() == expected.size() && !pcm.empty());
+        uint64_t difference = 0;
+        for (size_t i = 0; i < pcm.size(); i += 2) {
+            int16_t actual, wanted;
+            std::memcpy(&actual, pcm.data() + i, 2);
+            std::memcpy(&wanted, expected.data() + i, 2);
+            int delta = std::abs(int(actual) - int(wanted));
+            assert(delta < 64);
+            difference += delta;
         }
+        assert(difference < 4 * (pcm.size() / 2));
     }
-    assert(!player.play("/missing.wav") && player.hasError());
     assert(!player.play(nullptr) && player.hasError());
-    testFiles["/broken.wav"] = {1, 2, 3};
-    assert(!player.play("/broken.wav"));
-    auto truncated = readAsset("territory.wav");
-    truncated.resize(100);
-    testFiles["/truncated.wav"] = truncated;
-    assert(!player.play("/truncated.wav"));
-
-    auto unsupported = readAsset("01.wav");
-    unsupported[22] = 2;
-    testFiles["/stereo.wav"] = unsupported;
-    assert(!player.play("/stereo.wav"));
-
-    const int16_t expected[] = {-32768, -1, 0, 32767};
-    drwav_data_format format = {};
-    format.container = drwav_container_riff;
-    format.format = DR_WAVE_FORMAT_PCM;
-    format.channels = 1;
-    format.sampleRate = 16000;
-    format.bitsPerSample = 16;
-    drwav writer = {};
-    void* encoded = nullptr;
-    size_t encodedSize = 0;
-    assert(drwav_init_memory_write(&writer, &encoded, &encodedSize, &format, nullptr));
-    assert(drwav_write_pcm_frames(&writer, 4, expected) == 4);
-    drwav_uninit(&writer);
-    auto* first = static_cast<uint8_t*>(encoded);
-    testFiles["/pcm16.wav"] = std::vector<uint8_t>(first, first + encodedSize);
-    drwav_free(encoded, nullptr);
-    assert(player.play("/pcm16.wav"));
+    assert(!player.play("/missing.mp3") && player.hasError());
+    testFiles["/bad.mp3"] = {1, 2, 3};
+    assert(!player.play("/bad.mp3"));
+    auto unsupported = readAsset("01.mp3");
+    unsupported[3] &= 0x3f;
+    testFiles["/stereo.mp3"] = unsupported;
+    assert(!player.play("/stereo.mp3"));
+    auto tagged = readAsset("01.mp3");
+    tagged.insert(tagged.begin(), {'I', 'D', '3', 4, 0, 0, 0, 0, 0, 0});
+    testFiles["/tagged.mp3"] = tagged;
+    assert(!player.play("/tagged.mp3"));
+    auto shortHeader = readAsset("01.mp3");
+    shortHeader.resize(4);
+    testFiles["/header.mp3"] = shortHeader;
+    assert(!player.play("/header.mp3"));
+    auto input = readAsset("territory.mp3");
+    input.resize(input.size() - 10);
+    testFiles["/truncated.mp3"] = input;
+    assert(player.play("/truncated.mp3"));
+    for (int i = 0; i < 20000 && player.isPlaying(); ++i) {
+        player.tick();
+        ++testMillis;
+    }
+    assert(!player.isPlaying() && player.hasError());
+    assert(player.play("/territory.mp3"));
     player.tick();
-    assert(pcm.size() == sizeof(expected));
-    assert(std::memcmp(pcm.data(), expected, sizeof(expected)) == 0);
-
-    assert(player.play("/territory.wav"));
-    player.tick();
-    player.stop();
-    assert(!player.isPlaying() && !player.hasError());
-    assert(player.play("/camera.wav"));
     outputFailure = true;
     player.tick();
     assert(!player.isPlaying() && player.hasError());
     outputFailure = false;
+    assert(player.play("/camera.mp3"));
+    player.tick();
+    player.stop();
+    assert(!player.isPlaying() && !player.hasError());
+    assert(player.play("/01.mp3"));
+    player.stop();
 
-    assert(player.play("/01.wav"));
-    for (int i = 0; i < 63; ++i) player.tick();
-    assert(player.isPlaying());
-    testMillis += 79;
-    player.tick();
-    assert(player.isPlaying());
-    ++testMillis;
-    player.tick();
-    assert(!player.isPlaying());
-    std::cout << "Audio: 10 assets decoded sample-for-sample; PCM16, errors, restart, DMA drain passed\n";
+    FakePlayer fake;
+    AlarmManager manager(fake);
+    assert(manager.begin());
+    manager.playStartupTrack(); manager.tick();
+    assert(fake.tracks.back() == "/territory.mp3");
+    fake.complete(); manager.tick();
+    manager.processCommand(RadioCommand::ZONE_6_ALARM); manager.tick();
+    assert(fake.tracks.back() == "/camera.mp3");
+    fake.complete(); manager.tick();
+    assert(fake.tracks.back() == "/06.mp3");
+    fake.complete(); manager.tick();
+    assert(fake.tracks.back() == "/intruder.mp3");
+    fake.complete(); manager.tick();
+    testMillis += 240000; manager.tick();
+    assert(fake.tracks.back() == "/phrase_01.mp3");
+    manager.processCommand(RadioCommand::EMERGENCY_STOP);
+    assert(!fake.playing);
+    std::cout << "MP3: 10 assets match FFmpeg; errors, restart, output failure and manager paths passed\n";
 }
 
-int main() {
+int main(int argc, char** argv) {
+    assert(argc == 2);
     testManager();
-    testAudio();
+    testMp3(argv[1]);
 }

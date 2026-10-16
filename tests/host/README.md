@@ -2,7 +2,7 @@
 
 Сначала установите зависимости: `pio pkg install -e esp32-c3`.
 
-Из корня проекта на Linux с g++:
+Из корня проекта на Linux с gcc, g++ и FFmpeg:
 
 ```sh
 sh tests/host/run.sh
@@ -14,7 +14,7 @@ sh tests/host/run.sh
 docker run --rm -v "${PWD}:/workspace" -w /workspace --entrypoint sh pio-esp32:latest tests/host/run.sh
 ```
 
-Тестируется настоящий код AlarmManager и WavPlayer, включая dr_wav.
+Тестируется настоящий код AlarmManager и Mp3Player, включая Helix.
 Время, SPIFFS, очередь FreeRTOS и PDM-выход заменены тестовыми реализациями.
 Проверяются порядок тревог, переполнение, вытеснение фона, повтор фраз, стоп,
 ошибки воспроизведения, переполнение millis(), декодирование всех файлов data/
@@ -22,11 +22,14 @@ docker run --rm -v "${PWD}:/workspace" -w /workspace --entrypoint sh pio-esp32:l
 
 Это не проверка драйвера I2S, радио, реального времени или качества звука.
 
+MP3 сравниваются с независимым декодированием FFmpeg: длина PCM должна совпасть,
+средняя абсолютная ошибка меньше 4, максимальная меньше 64 единиц PCM16.
+Код приложения проверяется AddressSanitizer и UBSan; сторонний C-код Helix
+проверяется AddressSanitizer и собирается с -fwrapv без UBSan.
+Порядок аппаратной проверки: [MP3](../../docs/mp3.md).
+
 ## Стек задачи ESP32-C3
 
 Хостовые тесты не воспроизводят ограничение стека Arduino loopTask.
-В сборке для ESP32-C3 dr_wav 0.14.5 использует вложенные кадры
-4208 байт (преобразование PCM) и 4176 байт (чтение), не считая
-вызывающего кода и SPIFFS. Стандартных 8192 байт недостаточно.
-В platformio.ini задан стек 16384 байта. При проверке на плате
-контролируйте строки Loop stack и Loop stack minimum free в логе.
+В platformio.ini сохранён стек 16384 байта, использованный при проверке MP3 на плате.
+Контролируйте строки Loop stack и Loop stack minimum free в логе.

@@ -79,17 +79,17 @@ void AlarmManager::playNextTrack() {
     char path[24];
     const char* track = nullptr;
     if (_current.kind == EventKind::STARTUP) {
-        track = "/territory.wav";
+        track = "/territory.mp3";
     } else if (_current.kind == EventKind::BACKGROUND) {
-        snprintf(path, sizeof(path), "/phrase_%02u.wav", _current.number);
+        snprintf(path, sizeof(path), "/phrase_%02u.mp3", _current.number);
         track = path;
     } else if (_step == 0) {
-        track = "/camera.wav";
+        track = "/camera.mp3";
     } else if (_step == 1) {
-        snprintf(path, sizeof(path), "/%02u.wav", _current.number);
+        snprintf(path, sizeof(path), "/%02u.mp3", _current.number);
         track = path;
     } else {
-        track = "/intruder.wav";
+        track = "/intruder.mp3";
     }
 
     if (!_player.play(track)) {

@@ -3,11 +3,11 @@
 #include <esp_system.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "WavPlayer.h"
+#include "Mp3Player.h"
 #include "RadioReceiver.h"
 #include "AlarmManager.h"
 
-WavPlayer player(GPIO_NUM_3);
+Mp3Player player(GPIO_NUM_3);
 RadioReceiver radio;
 AlarmManager alarmManager(player);
 bool audioReady = false;

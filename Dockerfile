@@ -34,3 +34,4 @@ CMD ["/bin/bash"]
 # docker run --rm -it -v "${PWD}:/workspace" pio-esp32
 # ./rebuild.sh
 # https://espressif.github.io/esptool-js/
+# ffmpeg -i "data_src/i-caught-an-olive.wav" -map 0:a:0 -ac 1 -ar 24000 -c:a libmp3lame -b:a 64k -map_metadata -1 -id3v2_version 0 -write_id3v1 0 "data/phrase_01.mp3"

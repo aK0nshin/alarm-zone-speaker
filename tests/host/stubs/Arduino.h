@@ -7,6 +7,7 @@ using gpio_num_t = int;
 constexpr gpio_num_t GPIO_NUM_3 = 3;
 inline uint32_t testMillis = 0;
 inline uint32_t millis() { return testMillis; }
+inline uint32_t micros() { return testMillis * 1000; }
 inline long random(long low, long) { return low; }
 struct TestSerial {
     void println(const char*) {}
