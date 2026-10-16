@@ -1,0 +1,12 @@
+{
+  "flash_settings": {
+    "flash_size": "4MB",
+    "flash_mode": "dio"
+  },
+  "flash_files": {
+    "0x0000": ".pio/build/esp32-c3/bootloader.bin",
+    "0x8000": ".pio/build/esp32-c3/partitions.bin",
+    "0x10000": ".pio/build/esp32-c3/firmware.bin",
+    "0x290000": ".pio/build/esp32-c3/spiffs.bin"
+  }
+}

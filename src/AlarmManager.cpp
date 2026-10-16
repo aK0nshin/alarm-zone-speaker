@@ -1,108 +1,109 @@
 #include "AlarmManager.h"
 
-AlarmManager::AlarmManager(AudioPlayer& player) 
-    : _player(player), _currentPriority(AudioPriority::NONE), 
-      _pipeHead(0), _pipeTail(0) {}
+AlarmManager::AlarmManager(TrackPlayer& player) : _player(player) {}
 
-void AlarmManager::begin() {
-    resetBackgroundTimer();
+AlarmManager::~AlarmManager() {
+    if (_queue) vQueueDelete(_queue);
+}
+
+bool AlarmManager::begin() {
+    if (!_queue) {
+        _queue = xQueueCreateStatic(QUEUE_SIZE, sizeof(Event), _queueStorage, &_queueControl);
+    }
+    if (!_queue) return false;
+    clearPipeline();
+    return true;
+}
+
+bool AlarmManager::enqueue(Event event) {
+    if (!_queue) return false;
+    if (xQueueSend(_queue, &event, 0) == pdPASS) return true;
+    Serial.printf("[Manager] Queue full, event rejected: %u\n", event.number);
+    return false;
 }
 
 void AlarmManager::playStartupTrack() {
-    Serial.println("playStartupTrack start");
-    _currentPriority = AudioPriority::ALARM;
-    _lastBackgroundPlayTime = millis();
-    
-    addTrackToPipeline(FILE_STARTUP);
-    Serial.println("playStartupTrack start end");
+    enqueue({EventKind::STARTUP, 0});
 }
 
-void AlarmManager::processCommand(RadioCommand cmd) {
-    if (cmd == RadioCommand::NONE) return;
-
-    if (static_cast<int>(cmd) == EMERGENCY_STOP_CODE) {
-        Serial.println("[Manager] Экстренный останов. Очистка конвейера.");
+void AlarmManager::processCommand(RadioCommand command) {
+    if (!_queue || command == RadioCommand::NONE) return;
+    if (command == RadioCommand::EMERGENCY_STOP) {
         clearPipeline();
+        Serial.println("[Manager] Stopped; pending events cleared");
         return;
     }
 
-    int zone = static_cast<int>(cmd);
-    if (zone < MIN_ZONE_NUMBER || zone > MAX_ZONE_NUMBER) return;
-
-    if (_currentPriority == AudioPriority::NON_IMPORTANT) {
-        Serial.println("[Manager] Тревога вытесняет фоновую фразу. Перезапуск конвейера.");
-        clearPipeline();
-    }
-
-    _currentPriority = AudioPriority::ALARM;
-    _lastBackgroundPlayTime = millis(); 
-
-    char zoneFile[8];
-    snprintf(zoneFile, sizeof(zoneFile), FMT_ZONE_FILE, zone);
-
-    Serial.printf("[Manager] Загрузка в конвейер пакета тревоги для Зоны %d\n", zone);
-    addTrackToPipeline(FILE_CAMERA);
-    addTrackToPipeline(zoneFile);
-    addTrackToPipeline(FILE_INTRUDER);
+    int zone = static_cast<int>(command);
+    if (zone < 1 || zone > 6) return;
+    if (!enqueue({EventKind::ALARM, static_cast<uint8_t>(zone)})) return;
+    if (!_active || _current.kind != EventKind::BACKGROUND) return;
+    _player.stop();
+    finishEvent();
 }
 
 void AlarmManager::tick() {
-    Serial.println("tick start");
+    if (!_queue) return;
+    _player.tick();
     if (_player.isPlaying()) return;
 
-    if (_pipeHead != _pipeTail) {
-        String nextTrack = _pipelineQueue[_pipeHead];
-        _pipeHead = (_pipeHead + 1) % PIPELINE_SIZE;
-
-        if (!_player.play(nextTrack.c_str())) {
-            Serial.printf("[ОШИБКА КОНВЕЙЕРА] Пропуск битого файла: %s\n", nextTrack.c_str());
+    if (_active) {
+        if (_player.hasError()) {
+            Serial.println("[Manager] Audio error; entire current event abandoned");
+            _player.stop();
+            finishEvent();
         } else {
-            Serial.printf("[Pipeline] Запущено исполнение: %s\n", nextTrack.c_str());
+            uint8_t trackCount = _current.kind == EventKind::ALARM ? 3 : 1;
+            if (_step < trackCount) {
+                playNextTrack();
+                return;
+            }
+            finishEvent();
         }
+    }
+
+    if (xQueueReceive(_queue, &_current, 0) == pdPASS) {
+        _active = true;
+        _step = 0;
+        playNextTrack();
         return;
     }
-
-    if (_currentPriority == AudioPriority::ALARM) {
-        _currentPriority = AudioPriority::NONE;
-        resetBackgroundTimer(); 
-    }
-
-    if (millis() - _lastBackgroundPlayTime >= _nextBackgroundInterval) {
-        if (_currentPriority != AudioPriority::NONE || _pipeHead != _pipeTail || _player.isPlaying()) {
-            Serial.println("[Manager] Сработал таймер фразы, но система занята. Пропуск.");
-            resetBackgroundTimer(); 
-            return;
-        }
-        playBackgroundPhrase();
-    }
-    Serial.println("tick end");
+    if (millis() - _lastBackgroundPlayTime < _nextBackgroundInterval) return;
+    _current = {EventKind::BACKGROUND, static_cast<uint8_t>(random(1, TOTAL_PHRASES + 1))};
+    _active = true;
+    _step = 0;
+    playNextTrack();
 }
 
-void AlarmManager::addTrackToPipeline(const char* filePath) {
-    Serial.println("addTrackToPipeline start");
-    uint8_t nextTail = (_pipeTail + 1) % PIPELINE_SIZE;
-    
-    if (nextTail == _pipeHead) {
-        Serial.printf("[Pipeline] КРИТИЧЕСКАЯ ОШИБКА: Конвейер переполнен! Файл %s отброшен.\n", filePath);
+void AlarmManager::playNextTrack() {
+    char path[24];
+    const char* track = nullptr;
+    if (_current.kind == EventKind::STARTUP) {
+        track = "/territory.wav";
+    } else if (_current.kind == EventKind::BACKGROUND) {
+        snprintf(path, sizeof(path), "/phrase_%02u.wav", _current.number);
+        track = path;
+    } else if (_step == 0) {
+        track = "/camera.wav";
+    } else if (_step == 1) {
+        snprintf(path, sizeof(path), "/%02u.wav", _current.number);
+        track = path;
+    } else {
+        track = "/intruder.wav";
+    }
+
+    if (!_player.play(track)) {
+        Serial.printf("[Manager] Event abandoned: %s\n", track);
+        _player.stop();
+        finishEvent();
         return;
     }
-
-    _pipelineQueue[_pipeTail] = filePath;
-    _pipeTail = nextTail;
-    Serial.println("addTrackToPipeline end");
+    ++_step;
 }
 
-void AlarmManager::playBackgroundPhrase() {
-    _currentPriority = AudioPriority::NON_IMPORTANT;
-    
-    int randomId = random(1, TOTAL_PHRASES + 1); 
-    
-    char phraseFile[15];
-    snprintf(phraseFile, sizeof(phraseFile), FMT_PHRASE_FILE, randomId);
-
-    Serial.printf("[Manager] Загрузка в конвейер фоновой фразы: %s\n", phraseFile);
-    addTrackToPipeline(phraseFile);
-    
+void AlarmManager::finishEvent() {
+    _active = false;
+    _step = 0;
     resetBackgroundTimer();
 }
 
@@ -113,8 +114,6 @@ void AlarmManager::resetBackgroundTimer() {
 
 void AlarmManager::clearPipeline() {
     _player.stop();
-    _pipeHead = 0;
-    _pipeTail = 0;
-    _currentPriority = AudioPriority::NONE;
-    resetBackgroundTimer();
+    xQueueReset(_queue);
+    finishEvent();
 }

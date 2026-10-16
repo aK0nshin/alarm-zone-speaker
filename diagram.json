@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "author": "alarm-zone-speaker",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-c3-devkitm-1",
+      "id": "esp",
+      "top": 90,
+      "left": 40,
+      "attrs": {
+        "flashSize": "4",
+        "serialInterface": "USB_SERIAL_JTAG"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "sensor1",
+      "top": 65,
+      "left": 350,
+      "attrs": {
+        "color": "green",
+        "label": "OUT1 / GPIO0",
+        "key": "1",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "sensor2",
+      "top": 180,
+      "left": 350,
+      "attrs": {
+        "color": "green",
+        "label": "OUT2 / GPIO1",
+        "key": "2",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "speaker",
+      "top": 315,
+      "left": 365,
+      "attrs": {
+        "mode": "accurate",
+        "volume": "0.5"
+      }
+    },
+    {
+      "type": "wokwi-logic-analyzer",
+      "id": "radioSignals",
+      "top": 295,
+      "left": 600,
+      "attrs": {
+        "channelNames": "SCK,MISO,MOSI,SS,CSN,CE,OUT1,OUT2",
+        "bufferSize": "10000"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "radioLabel",
+      "top": 50,
+      "left": 590,
+      "attrs": {
+        "text": "nRF24L01+ (RF не симулируется)\n3.3V  GND  SCK  MISO  MOSI  SS  CSN  CE"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "ampLabel",
+      "top": 410,
+      "left": 350,
+      "attrs": {
+        "text": "Зуммер только для визуализации GPIO3\nLM4871 и аналоговый звук не моделируются"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:0",
+      "sensor1:1.l",
+      "green",
+      []
+    ],
+    [
+      "esp:GND.1",
+      "sensor1:2.l",
+      "black",
+      []
+    ],
+    [
+      "esp:1",
+      "sensor2:1.l",
+      "green",
+      []
+    ],
+    [
+      "esp:GND.1",
+      "sensor2:2.l",
+      "black",
+      []
+    ],
+    [
+      "esp:3",
+      "speaker:2",
+      "purple",
+      []
+    ],
+    [
+      "esp:GND.1",
+      "speaker:1",
+      "black",
+      []
+    ],
+    [
+      "esp:4",
+      "radioSignals:D0",
+      "blue",
+      []
+    ],
+    [
+      "esp:5",
+      "radioSignals:D1",
+      "blue",
+      []
+    ],
+    [
+      "esp:6",
+      "radioSignals:D2",
+      "blue",
+      []
+    ],
+    [
+      "esp:2",
+      "radioSignals:D3",
+      "blue",
+      []
+    ],
+    [
+      "esp:7",
+      "radioSignals:D4",
+      "yellow",
+      []
+    ],
+    [
+      "esp:10",
+      "radioSignals:D5",
+      "orange",
+      []
+    ],
+    [
+      "esp:0",
+      "radioSignals:D6",
+      "green",
+      []
+    ],
+    [
+      "esp:1",
+      "radioSignals:D7",
+      "green",
+      []
+    ],
+    [
+      "esp:GND.1",
+      "radioSignals:GND",
+      "black",
+      []
+    ]
+  ]
+}

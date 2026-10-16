@@ -1,68 +1,47 @@
-#ifndef ALARM_MANAGER_H
-#define ALARM_MANAGER_H
+#pragma once
 
 #include <Arduino.h>
-#include "AudioPlayer.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include "TrackPlayer.h"
 #include "RadioReceiver.h"
-
-enum class AudioPriority {
-    NONE,
-    NON_IMPORTANT, 
-    ALARM          
-};
 
 class AlarmManager {
 public:
-    AlarmManager(AudioPlayer& player);
-    
-    void begin();
+    explicit AlarmManager(TrackPlayer& player);
+    ~AlarmManager();
+    AlarmManager(const AlarmManager&) = delete;
+    AlarmManager& operator=(const AlarmManager&) = delete;
+
+    bool begin();
     void playStartupTrack();
-    void processCommand(RadioCommand cmd);
-    void tick();                           
+    void processCommand(RadioCommand command);
+    void tick();
 
 private:
-    void addTrackToPipeline(const char* filePath); 
-    void playBackgroundPhrase();
+    enum class EventKind : uint8_t { STARTUP, ALARM, BACKGROUND };
+    struct Event {
+        EventKind kind;
+        uint8_t number;
+    };
+    static constexpr uint8_t QUEUE_SIZE = 6;
+    static constexpr uint32_t BG_MIN_INTERVAL_MS = 4000; // 240000; // 4 минуты
+    static constexpr uint32_t BG_MAX_INTERVAL_MS = 6000; // 360000; // 6 минут
+    static constexpr uint8_t TOTAL_PHRASES = 1;
+
+    bool enqueue(Event event);
+    void finishEvent();
     void resetBackgroundTimer();
     void clearPipeline();
+    void playNextTrack();
 
-    AudioPlayer& _player;
-    AudioPriority _currentPriority;
-
-    // --- Единый конвейер воспроизведения треков ---
-    static const uint8_t PIPELINE_SIZE = 20;
-    String _pipelineQueue[PIPELINE_SIZE];
-    uint8_t _pipeHead;
-    uint8_t _pipeTail;
-
-    // Настройки фонового таймера фраз
-    unsigned long _lastBackgroundPlayTime;
-    unsigned long _nextBackgroundInterval;
-    
-    // =========================================================================
-    // НАСТРОЙКИ БИЗНЕС-ЛОГИКИ
-    // =========================================================================
-    
-    // Ограничения зон и спецкоманд
-    static const int MIN_ZONE_NUMBER = 1;
-    static const int MAX_ZONE_NUMBER = 6;
-    static const int EMERGENCY_STOP_CODE = 99; // Команда EMERGENCY_STOP всегда 99
-
-    // Временные интервалы фоновых фраз (в миллисекундах)
-    const uint32_t BG_MIN_INTERVAL_MS = 240000; // 4 минуты
-    const uint32_t BG_MAX_INTERVAL_MS = 360000; // 6 минут
-    
-    // Общее число фраз phrase_XX.wav
-    const uint8_t TOTAL_PHRASES = 1;
-
-    // Имена статических системных треков
-    const char* FILE_CAMERA = "/camera.wav";
-    const char* FILE_INTRUDER = "/intruder.wav";
-    const char* FILE_STARTUP = "/territory.wav"; 
-
-    // Спецификаторы форматирования строк
-    const char* FMT_ZONE_FILE = "/%02d.wav";
-    const char* FMT_PHRASE_FILE = "/phrase_%02d.wav";
+    TrackPlayer& _player;
+    StaticQueue_t _queueControl = {};
+    uint8_t _queueStorage[QUEUE_SIZE * sizeof(Event)] = {};
+    QueueHandle_t _queue = nullptr;
+    Event _current = {EventKind::STARTUP, 0};
+    bool _active = false;
+    uint8_t _step = 0;
+    uint32_t _lastBackgroundPlayTime = 0;
+    uint32_t _nextBackgroundInterval = 0;
 };
-
-#endif // ALARM_MANAGER_H
