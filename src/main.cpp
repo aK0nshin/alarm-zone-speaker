@@ -6,8 +6,9 @@
 #include "Mp3Player.h"
 #include "RadioReceiver.h"
 #include "AlarmManager.h"
+#include "Config.h"
 
-Mp3Player player(GPIO_NUM_3);
+Mp3Player player(static_cast<gpio_num_t>(Config::AUDIO_PIN));
 RadioReceiver radio;
 AlarmManager alarmManager(player);
 bool audioReady = false;

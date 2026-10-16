@@ -25,8 +25,6 @@ private:
         uint8_t number;
     };
     static constexpr uint8_t QUEUE_SIZE = 6;
-    static constexpr uint32_t BG_MIN_INTERVAL_MS = 4000; // 240000; // 4 минуты
-    static constexpr uint32_t BG_MAX_INTERVAL_MS = 6000; // 360000; // 6 минут
     static constexpr uint8_t TOTAL_PHRASES = 1;
 
     bool enqueue(Event event);

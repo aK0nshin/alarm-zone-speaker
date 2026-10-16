@@ -1,4 +1,5 @@
 #include "AlarmManager.h"
+#include "Config.h"
 
 AlarmManager::AlarmManager(TrackPlayer& player) : _player(player) {}
 
@@ -109,7 +110,7 @@ void AlarmManager::finishEvent() {
 
 void AlarmManager::resetBackgroundTimer() {
     _lastBackgroundPlayTime = millis();
-    _nextBackgroundInterval = random(BG_MIN_INTERVAL_MS, BG_MAX_INTERVAL_MS + 1);
+    _nextBackgroundInterval = random(Config::BG_MIN_INTERVAL_MS, Config::BG_MAX_INTERVAL_MS + 1);
 }
 
 void AlarmManager::clearPipeline() {

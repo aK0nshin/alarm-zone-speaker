@@ -1,18 +1,14 @@
 #include "RadioDriver.h"
+#include "Config.h"
 #include <RadioProtocolRF24.h>
 #include <SPI.h>
-
-// Аппаратные пины SPI для ESP32-C3 Super Mini
-#define SPI_SCK      4
-#define SPI_MISO     5
-#define SPI_MOSI     6
-#define SPI_SS       2
 
 RadioDriver::RadioDriver(uint8_t cePin, uint8_t csnPin) : _radio(cePin, csnPin) {}
 RadioDriver::~RadioDriver() {}
 
 bool RadioDriver::begin() {
-    SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SPI_SS); 
+    SPI.begin(Config::RADIO_SCK_PIN, Config::RADIO_MISO_PIN,
+              Config::RADIO_MOSI_PIN, Config::RADIO_SS_PIN);
 
     if (!_radio.begin()) return false;
 

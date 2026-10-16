@@ -3,7 +3,7 @@ set -eu
 build=$(mktemp -d)
 trap 'rm -rf "$build"' EXIT
 g++ -std=c++11 -Wall -Wextra -Werror -fsanitize=address,undefined \
-    -Itests/host/radio_stubs -Ilib/RadioProtocol/src \
+    -Itests/host/radio_stubs -Ilib/RadioProtocol/src -Iinclude \
     tests/host/test_radio_protocol.cpp lib/RadioProtocol/src/RadioProtocol.cpp \
     -o "$build/radio-tests"
 "$build/radio-tests"

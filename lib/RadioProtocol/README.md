@@ -6,16 +6,20 @@
 
 ## Настройки
 
-В [src/RadioSettings.h](src/RadioSettings.h):
+В приложении спикера настройки находятся в [include/Config.h](../../include/Config.h):
 
 ```cpp
-#define RADIO_GROUP_NAME "ALARM"
-#define RADIO_CAMERA_COOLDOWN_MS 30000UL
+namespace Config {
+constexpr char RADIO_GROUP_NAME[] = "ALPHA";
+constexpr uint32_t RADIO_CAMERA_COOLDOWN_MS = 3000;
+}
 ```
 
 Имя группы: 1..15 байт, рекомендуется ASCII, регистр учитывается.
 У всех устройств группы должно быть одинаковое имя. Для другой группы задайте другое.
 После изменения настроек пересоберите прошивку.
+Библиотека не включает Config.h и получает имя группы аргументом.
+В проекте камеры задайте такое же имя в собственном Config.h; пины спикера копировать не нужно.
 
 **Одна камера = одна зона**, номера 1..6. Камера отправляет команду своей зоны;
 отдельных ID камер, сессий и номеров событий нет.
@@ -56,7 +60,7 @@
 
 ```cpp
 #include <RadioProtocolRF24.h>
-#include <RadioSettings.h>
+#include "Config.h"
 #include <esp_system.h>
 
 constexpr RadioCommand CAMERA_ZONE = RadioCommand::ZONE_1_ALARM;
@@ -72,7 +76,7 @@ void beginRadio() {
 void sendCommand(RadioCommand command) {
     if (!radioReady) return;
     RadioProtocol::Packet packet;
-    if (!RadioProtocol::encode(command, RADIO_GROUP_NAME, packet)) return;
+    if (!RadioProtocol::encode(command, Config::RADIO_GROUP_NAME, packet)) return;
     for (unsigned copy = 0; copy < 3; ++copy) {
         if (copy) delay(20 + esp_random() % 41);
         radio.write(packet.data(), packet.size());

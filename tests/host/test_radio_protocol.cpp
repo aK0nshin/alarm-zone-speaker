@@ -1,5 +1,5 @@
 #include <RadioProtocolRF24.h>
-#include <RadioSettings.h>
+#include <Config.h>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -12,12 +12,12 @@ static void testCodec() {
         RadioCommand command = static_cast<RadioCommand>(value);
         Packet before = packet;
         bool valid = (value >= 1 && value <= 6) || value == 99;
-        assert(encode(command, RADIO_GROUP_NAME, packet) == valid);
+        assert(encode(command, Config::RADIO_GROUP_NAME, packet) == valid);
         if (!valid) {
             assert(packet == before);
             continue;
         }
-        assert(decode(packet.data(), packet.size(), RADIO_GROUP_NAME) == command);
+        assert(decode(packet.data(), packet.size(), Config::RADIO_GROUP_NAME) == command);
     }
     assert(encode(RadioCommand::ZONE_1_ALARM, "yard", packet));
     const uint8_t expected[PAYLOAD_SIZE] = {'A', 'Z', 3, 1, 'y', 'a', 'r', 'd'};
