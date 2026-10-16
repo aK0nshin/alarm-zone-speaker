@@ -4,7 +4,7 @@
 #include "RadioProtocol.h"
 
 namespace RadioProtocol {
-// Call after RF24::begin(). Broadcast receivers must not send simultaneous ACKs.
+// Вызывать после RF24::begin(). При групповой передаче приёмники не должны одновременно отправлять ACK.
 inline bool configureRadio(RF24& radio) {
     radio.setChannel(CHANNEL);
     radio.setAddressWidth(ADDRESS_WIDTH);

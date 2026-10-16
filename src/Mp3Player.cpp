@@ -22,7 +22,7 @@ bool Mp3Player::fillInput() {
 }
 
 bool Mp3Player::validFrame() {
-    // A 576-sample frame at 24 kHz / 64 kbit/s needs at least 192 bytes.
+    // Кадр из 576 отсчётов при 24 кГц и 64 кбит/с занимает не менее 192 байт.
     if (_inputSize < 192 || MP3FindSyncWord(_input, _inputSize) != 0) return false;
     MP3FrameInfo info = {};
     if (MP3GetNextFrameInfo(_decoder, &info, _input) != ERR_MP3_NONE) return false;

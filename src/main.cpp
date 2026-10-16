@@ -40,7 +40,7 @@ void loop() {
         return;
     }
     if (radioReady) {
-        // Bound radio polling so continuous traffic cannot starve audio.
+        // Ограничиваем опрос радио, чтобы непрерывный поток команд не задерживал обработку аудио.
         for (uint8_t i = 0; i < 3; ++i) {
             alarmManager.processCommand(radio.checkPayload());
         }

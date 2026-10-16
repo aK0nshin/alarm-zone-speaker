@@ -25,7 +25,7 @@ private:
     fs::File _file;
     HMP3Decoder _decoder = nullptr;
     uint8_t _input[2048] = {};
-    // Helix's output capacity must accommodate even an invalid stereo header.
+    // Выходной буфер Helix должен вмещать и стереоданные при некорректном заголовке.
     int16_t _pcm[MAX_NCHAN * MAX_NGRAN * MAX_NSAMP] = {};
     int _inputSize = 0;
     size_t _pcmCount = 0;

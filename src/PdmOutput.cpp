@@ -61,6 +61,6 @@ size_t PdmOutput::write(const uint8_t* data, size_t length) {
 }
 
 uint32_t PdmOutput::drainTimeMs() const {
-    // IDF 4 has no TX-drained API; wait one full DMA ring plus one buffer.
+    // В IDF 4 нет API ожидания завершения передачи; ждём полное кольцо DMA и ещё один буфер.
     return ((DMA_COUNT + 1) * DMA_SAMPLES * 1000UL + _sampleRate - 1) / _sampleRate;
 }
