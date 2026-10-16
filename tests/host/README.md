@@ -11,7 +11,7 @@ sh tests/host/run.sh
 В существующем Docker-образе проекта, из PowerShell:
 
 ```powershell
-docker run --rm -v "${PWD}:/workspace" -w /workspace --entrypoint sh pio-esp32:latest tests/host/run.sh
+docker run --rm -v "${PWD}:/workspace" -w /workspace --entrypoint sh pio-esp32:latest -c "apt-get update -qq && apt-get install -y -qq build-essential && sh tests/host/run.sh"
 ```
 
 Тестируется настоящий код AlarmManager и Mp3Player, включая Helix.
@@ -21,6 +21,12 @@ docker run --rm -v "${PWD}:/workspace" -w /workspace --entrypoint sh pio-esp32:l
 и ожидание завершения аудио.
 
 Это не проверка драйвера I2S, радио, реального времени или качества звука.
+
+Общий RadioProtocol проверяется отдельно в C++11: точное сравнение имени группы,
+кодирование всех значений команды, неверная длина и повреждённые заголовки,
+независимые таймеры шести зон, граница интервала, его отключение, переполнение millis(),
+неограниченная остановка и широковещательные настройки обеих сторон.
+Адаптер RF24 проверяется с тестовой заменой драйвера, не с радиомодулем.
 
 MP3 сравниваются с независимым декодированием FFmpeg: длина PCM должна совпасть,
 средняя абсолютная ошибка меньше 4, максимальная меньше 64 единиц PCM16.

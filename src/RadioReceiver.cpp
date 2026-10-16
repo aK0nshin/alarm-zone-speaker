@@ -1,5 +1,6 @@
 #include "RadioReceiver.h"
 #include "RadioDriver.h"
+#include <RadioSettings.h>
 
 RadioDriver hardwareDriver(10, 7); // CE=10, CSN=7
 
@@ -7,28 +8,23 @@ RadioReceiver::RadioReceiver() {}
 RadioReceiver::~RadioReceiver() {}
 
 bool RadioReceiver::begin() {
+    _ready = false;
+    _duplicates.reset();
     if (!hardwareDriver.begin()) {
-        Serial.println("[RadioReceiver] Ошибка: Железо радиомодуля не отвечает.");
+        Serial.println("[Radio] Hardware initialization failed");
         return false;
     }
-
-    Serial.println("[RadioReceiver] Система связи готова к обработке команд.");
+    _ready = true;
+    Serial.printf("[Radio] Broadcast ready, group=%s\n", RADIO_GROUP_NAME);
     return true;
 }
 
 RadioCommand RadioReceiver::checkPayload() {
-    uint8_t rawByte = 0;
-    
-    if (!hardwareDriver.readByte(rawByte)) return RadioCommand::NONE;
-
-    switch (rawByte) {
-        case 1:   case '1': return RadioCommand::ZONE_1_ALARM;
-        case 2:   case '2': return RadioCommand::ZONE_2_ALARM;
-        case 3:   case '3': return RadioCommand::ZONE_3_ALARM;
-        case 4:   case '4': return RadioCommand::ZONE_4_ALARM;
-        case 5:   case '5': return RadioCommand::ZONE_5_ALARM;
-        case 6:   case '6': return RadioCommand::ZONE_6_ALARM;
-        case 's': case 99:  return RadioCommand::EMERGENCY_STOP;
-        default:            return RadioCommand::NONE;
-    }
+    if (!_ready) return RadioCommand::NONE;
+    RadioProtocol::Packet packet;
+    if (!hardwareDriver.readPacket(packet.data(), packet.size())) return RadioCommand::NONE;
+    RadioCommand command = RadioProtocol::decode(packet.data(), packet.size(), RADIO_GROUP_NAME);
+    if (!_duplicates.accept(command, millis(), RADIO_CAMERA_COOLDOWN_MS)) return RadioCommand::NONE;
+    Serial.printf("[Radio] command=%u\n", unsigned(command));
+    return command;
 }

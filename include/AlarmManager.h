@@ -4,7 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include "TrackPlayer.h"
-#include "RadioReceiver.h"
+#include <RadioProtocol.h>
 
 class AlarmManager {
 public:

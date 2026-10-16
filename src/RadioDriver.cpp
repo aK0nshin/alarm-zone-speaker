@@ -1,4 +1,5 @@
 #include "RadioDriver.h"
+#include <RadioProtocolRF24.h>
 #include <SPI.h>
 
 // Аппаратные пины SPI для ESP32-C3 Super Mini
@@ -16,18 +17,14 @@ bool RadioDriver::begin() {
     if (!_radio.begin()) return false;
 
     _radio.setPALevel(RF24_PA_LOW); 
-    _radio.setDataRate(RF24_1MBPS);
-    _radio.setPayloadSize(1);
-    _radio.openReadingPipe(1, (const uint8_t*)"ALARM");
-    _radio.startListening();
-
-    return true;
+    return RadioProtocol::configureReceiver(_radio);
 }
 
 
-bool RadioDriver::readByte(uint8_t &outputByte) {
+bool RadioDriver::readPacket(uint8_t* output, size_t length) {
+    if (!output || length != RadioProtocol::PAYLOAD_SIZE) return false;
     if (!_radio.available()) return false;
 
-    _radio.read(&outputByte, 1);
+    _radio.read(output, length);
     return true;
 }

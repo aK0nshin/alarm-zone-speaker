@@ -12,7 +12,7 @@ public:
     // Инициализация физической шины SPI и чипа nRF24L01+
     bool begin();
 
-    bool readByte(uint8_t &outputByte);
+    bool readPacket(uint8_t* output, size_t length);
 
 private:
     RF24 _radio;
