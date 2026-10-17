@@ -7,7 +7,6 @@
 
 В основнои приложении находятся настройки [include/Config.h](../../include/Config.h):
 
-
 ```cpp
 namespace Config {
 constexpr char RADIO_GROUP_NAME[] = "ALPHA";
